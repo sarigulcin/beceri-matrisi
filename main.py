@@ -29,16 +29,6 @@ def create_tables():
     );
     """)
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS employees (
-        id SERIAL PRIMARY KEY,
-        ad_soyad VARCHAR(150),
-        sicil_no VARCHAR(50),
-        pozisyon VARCHAR(100),
-        departman VARCHAR(100)
-    );
-    """)
-
     conn.commit()
     cur.close()
     conn.close()
@@ -51,6 +41,7 @@ def startup():
 def root():
     return {"message": "API çalışıyor"}
 
+# 🔹 TÜM SÜREÇLERİ GETİR
 @app.get("/processes")
 def get_processes():
     conn = get_conn()
@@ -60,20 +51,18 @@ def get_processes():
     cur.close()
     conn.close()
 
-    return [
-        {"id": row[0], "process_name": row[1]}
-        for row in rows
-    ]
+    return [{"id": r[0], "process_name": r[1]} for r in rows]
 
+# 🔹 SÜREÇ EKLE
 @app.post("/processes")
 def add_process(payload: dict):
-    process_name = payload.get("process_name")
+    name = payload.get("process_name")
 
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
         "INSERT INTO processes (process_name) VALUES (%s) RETURNING id, process_name",
-        (process_name,)
+        (name,)
     )
     row = cur.fetchone()
     conn.commit()
@@ -81,3 +70,33 @@ def add_process(payload: dict):
     conn.close()
 
     return {"id": row[0], "process_name": row[1]}
+
+# 🔹 SÜREÇ GÜNCELLE
+@app.put("/processes/{process_id}")
+def update_process(process_id: int, payload: dict):
+    name = payload.get("process_name")
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE processes SET process_name=%s WHERE id=%s RETURNING id, process_name",
+        (name, process_id)
+    )
+    row = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return {"id": row[0], "process_name": row[1]}
+
+# 🔹 SÜREÇ SİL
+@app.delete("/processes/{process_id}")
+def delete_process(process_id: int):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM processes WHERE id=%s", (process_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return {"status": "deleted"}
